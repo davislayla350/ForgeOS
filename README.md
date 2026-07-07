@@ -1,103 +1,136 @@
 # ForgeOS
 
-**AI-powered product planning and prototyping agent.** Describe a project idea and ForgeOS assembles a crew of AI employees (CEO, Product Manager, Engineer, QA, Security, Reviewer, DevOps) that plans, builds, reviews, and "ships" your product live, streaming every event to a blueprint-styled dashboard.
+> **An AI-powered multi-agent operating system for software development.**
 
-Built by LayLa Davis for the **Global AI Hackathon Series with Qwen Cloud** — **Track 3: Agent Society**. Licensed under MIT (see `LICENSE`).
+ForgeOS transforms a single project idea into a structured software development workspace using a team of specialized AI agents. Instead of relying on one large prompt, ForgeOS coordinates multiple role-based agents, including a CEO, Product Manager, Engineer, QA, Security, Reviewer, and DevOps, to collaboratively plan, review, and build a software project.
 
-![ForgeOS system architecture](docs/architecture.png)
+**Global AI Hackathon Series with Qwen Cloud** — **Track 3: Agent Society**.
 
-```
+---
+
+## Features
+
+- Multi-agent collaboration with specialized AI roles
+- Live event streaming through a desktop-inspired dashboard
+- AI-generated project planning and implementation roadmap
+- Code Explorer with copy and ZIP download support
+- Artifact Center for generated documentation and assets
+- Investor Snapshot with business-focused project insights
+- Automatic fallback to demo mode when AI services are unavailable
+- Fully deployed with Vercel (frontend) and Render (backend)
+
+---
+
+## Tech Stack
+
+### Frontend
+- Next.js 15
+- React
+- TypeScript
+- Tailwind CSS v4
+- shadcn/ui
+- Framer Motion
+
+### Backend
+- FastAPI
+- Python
+- WebSockets
+
+### AI
+- Qwen (qwen-plus)
+- DashScope OpenAI-Compatible API
+
+### Deployment
+- Vercel
+- Render
+- UptimeRobot
+
+---
+
+## Project Structure
+
+```text
 forgeOS/
-  frontend/   # Next.js 15 (App Router) + TypeScript + Tailwind CSS v4 + shadcn/ui
-  backend/    # FastAPI (Python) multi-agent orchestration service
+├── frontend/   # Next.js application
+└── backend/    # FastAPI multi-agent service
 ```
 
-## Quick start
+---
 
-Backend:
+## Quick Start
+
+### Backend
 
 ```bash
 cd backend
 pip install -r requirements.txt
-cp .env.example .env          # add your QWEN_API_KEY, or leave empty for demo mode
+cp .env.example .env
 uvicorn app.main:app --reload --port 8000
 ```
 
-Frontend (in a second terminal):
+### Frontend
 
 ```bash
 cd frontend
 npm install
 cp .env.local.example .env.local
-npm run dev                    # http://localhost:3000
+npm run dev
 ```
 
-## Architecture
+Visit:
 
-```
-Browser (Next.js dashboard)
-   |  POST /company/start  ->  { run_id, ws_url }
-   |  WS   /company/stream/{run_id}   (live event stream, reconnect w/ ?since=)
-   |  POST /company/launch            (REST fallback: full run in one response)
-   v
-FastAPI backend
-   CompanyOrchestrator -> task DAG -> role agents (CEO, PM, Engineer, QA,
-   Security, Reviewer, DevOps) -> ordered event timeline
-   |
-   v
-Qwen (qwen-plus) via DashScope's OpenAI-compatible API
-```
+http://localhost:3000
 
-Key properties:
+---
 
-- **Streaming first.** The frontend opens a WebSocket for live events. If the socket cannot connect, it falls back to a single REST call and replays the events client-side. If both fail, the UI shows a clear error notice instead of a broken page.
-- **AI with a deterministic net.** Every agent call is wrapped: if the Qwen API is unreachable, credits are exhausted, or no key is configured, agents fall back to built-in deterministic planning. Runs always complete; the UI labels these runs with a "Demo mode" badge (driven by `plan_source` on the plan).
-- **Stateless by design.** Run state lives in process memory only (for stream reconnects); nothing is persisted to a database.
-- **One HTTP boundary per side.** `frontend/src/services/api.ts` is the only frontend file that talks HTTP; `backend/app/api/routes.py` is the only backend module that defines endpoints.
+## How It Works
 
-Endpoints: `GET /health`, `POST /launch`, `POST /company/launch`, `POST /company/start`, `WS /company/stream/{run_id}`.
+1. Enter a project idea.
+2. ForgeOS creates a software development plan.
+3. Specialized AI agents collaborate on different responsibilities.
+4. Progress streams live through the dashboard.
+5. Generated code, documentation, and project artifacts are available for review, copying, or ZIP download.
 
-### Why multiple agents (Agent Society)
+---
 
-ForgeOS splits the work across seven role agents instead of one large prompt, and the split does real work:
+## Why Multiple Agents?
 
-- **Task decomposition and role assignment.** The CEO turns the idea into a plan; the PM decomposes it into a task DAG; each downstream agent (Engineer, QA, Security, Reviewer, DevOps) claims the tasks matching its role. Independent branches of the DAG execute without waiting on each other.
-- **Specialized review passes catch different failure classes.** QA, Security, and the Reviewer each audit the Engineer's output against different criteria, and their findings flow back over a shared message bus as structured handoffs rather than one model grading its own work.
-- **Disagreement is part of the protocol.** Review agents can reject deliverables, which routes work back with the objection attached; the Reviewer arbitrates before DevOps is allowed to ship.
+Rather than relying on a single AI prompt, ForgeOS assigns specialized responsibilities across multiple agents.
 
-A formal benchmark against a single-agent baseline (same model, one prompt, same deliverables rubric) is planned future work; the current codebase makes that comparison straightforward to run since both paths share the same orchestrator and event schema.
+- **CEO** defines the overall strategy.
+- **Product Manager** creates the implementation roadmap.
+- **Engineer** generates technical solutions.
+- **QA** validates functionality.
+- **Security** reviews potential risks.
+- **Reviewer** evaluates overall quality.
+- **DevOps** prepares the final deliverable.
 
-## Security Considerations
+This role-based workflow creates a more structured development process while demonstrating collaborative AI agents for the **Agent Society** track.
 
-- **Secrets.** The Qwen API key lives only in the backend's server-side environment (`backend/.env`, gitignored; see `.env.example`). The browser never receives it. The only frontend env var is the public backend URL (`NEXT_PUBLIC_FORGEOS_API_URL`).
-- **Rate limiting.** LLM-consuming endpoints (`/launch`, `/company/launch`, `/company/start`) enforce a per-IP sliding window (default 5 requests/minute) plus a global hourly budget (default 100 requests/hour) so a public demo cannot drain API credits. Limits are configurable via `RATE_LIMIT_PER_MINUTE` and `RATE_LIMIT_GLOBAL_PER_HOUR`. When deployed behind a reverse proxy, set `TRUST_PROXY=true` so limiting keys on `X-Forwarded-For`.
-- **Input validation.** Project ideas are validated server-side (3 to 2000 characters, enforced by Pydantic) and mirrored client-side.
-- **Error hygiene.** API errors return generic messages; details go to server logs only. Rate-limit responses return HTTP 429 with a friendly explanation and `Retry-After`.
-- **CORS.** Allowed origins are an explicit allowlist from `CORS_ORIGINS`; set it to your deployed frontend URL in production.
-- **No stored user data.** No accounts, no database, no cookies. Prompts and results live in process memory for the duration of a run (plus a short reconnect window) and are lost on restart.
-- **Known limitations (beta).** Rate limiting is in-memory and per-instance (resets on restart; use Redis if you ever scale horizontally). There is no authentication; the demo relies on rate limits and input validation. The interactive API docs at `/docs` are public, which is intentional for judging.
+---
 
 ## Deployment
 
-Recommended free-tier setup: **frontend on Vercel, backend on Render (or Railway/Fly).**
+- **Frontend:** Vercel
+- **Backend:** Render
+- **Monitoring:** UptimeRobot
 
-Backend (Render example):
+---
 
-1. New Web Service from this repo, root directory `backend`.
-2. Build command: `pip install -r requirements.txt`
-3. Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Environment variables: `QWEN_API_KEY`, `CORS_ORIGINS=https://<your-frontend>.vercel.app`, `TRUST_PROXY=true`, `APP_ENV=production`. Optionally tune the `RATE_LIMIT_*` values.
+## Security
 
-Frontend (Vercel):
+- Server-side API key storage
+- Rate limiting
+- Input validation
+- Configurable CORS
+- No persistent user data
+- Graceful demo mode when AI services are unavailable
 
-1. Import the repo, root directory `frontend`.
-2. Environment variable: `NEXT_PUBLIC_FORGEOS_API_URL=https://<your-backend>.onrender.com`
-3. Deploy. WebSockets are used against the backend host, so the backend platform must support them (Render, Railway, and Fly all do).
+---
 
-Local production check: `cd frontend && npm run build` and `cd backend && python verify.py`.
+## Notes for Judges
 
-## Notes for judges (Devpost)
-
-- With no `QWEN_API_KEY`, the entire app still works in deterministic demo mode, clearly labeled in the UI. Live AI mode activates the moment a key is added, with zero code changes.
-- Legal pages: `/privacy` and `/terms`.
-- Demo walkthrough: see `DEMO_SCRIPT.md`.
+- ForgeOS works even without an API key using deterministic demo mode.
+- Live AI mode activates automatically once a valid API key is configured.
+- Privacy Policy: `/privacy`
+- Terms of Service: `/terms`
