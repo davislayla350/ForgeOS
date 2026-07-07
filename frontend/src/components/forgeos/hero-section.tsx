@@ -69,7 +69,7 @@ export function HeroSection({ onLaunch, isRunning, isComplete, source }: HeroSec
               size="lg"
               onClick={handleLaunch}
               className="h-11 shrink-0 gap-2 bg-blueprint px-5 font-mono text-xs tracking-wide text-blueprint-foreground uppercase hover:bg-blueprint/90"
-              disabled={!projectIdea.trim() || isRunning}
+              disabled={projectIdea.trim().length < 3 || isRunning}
             >
               {isRunning ? "Launching..." : isComplete ? "Launched" : "Launch Company"}
               <ArrowRight className="size-4" />

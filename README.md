@@ -2,7 +2,9 @@
 
 **AI-powered product planning and prototyping agent.** Describe a project idea and ForgeOS assembles a crew of AI employees (CEO, Product Manager, Engineer, QA, Security, Reviewer, DevOps) that plans, builds, reviews, and "ships" your product live, streaming every event to a blueprint-styled dashboard.
 
-Built by LayLa Davis for a student hackathon. Licensed under MIT (see `LICENSE`).
+Built by LayLa Davis for the **Global AI Hackathon Series with Qwen Cloud** — **Track 3: Agent Society**. Licensed under MIT (see `LICENSE`).
+
+![ForgeOS system architecture](docs/architecture.png)
 
 ```
 forgeOS/
@@ -54,6 +56,16 @@ Key properties:
 - **One HTTP boundary per side.** `frontend/src/services/api.ts` is the only frontend file that talks HTTP; `backend/app/api/routes.py` is the only backend module that defines endpoints.
 
 Endpoints: `GET /health`, `POST /launch`, `POST /company/launch`, `POST /company/start`, `WS /company/stream/{run_id}`.
+
+### Why multiple agents (Agent Society)
+
+ForgeOS splits the work across seven role agents instead of one large prompt, and the split does real work:
+
+- **Task decomposition and role assignment.** The CEO turns the idea into a plan; the PM decomposes it into a task DAG; each downstream agent (Engineer, QA, Security, Reviewer, DevOps) claims the tasks matching its role. Independent branches of the DAG execute without waiting on each other.
+- **Specialized review passes catch different failure classes.** QA, Security, and the Reviewer each audit the Engineer's output against different criteria, and their findings flow back over a shared message bus as structured handoffs rather than one model grading its own work.
+- **Disagreement is part of the protocol.** Review agents can reject deliverables, which routes work back with the objection attached; the Reviewer arbitrates before DevOps is allowed to ship.
+
+A formal benchmark against a single-agent baseline (same model, one prompt, same deliverables rubric) is planned future work; the current codebase makes that comparison straightforward to run since both paths share the same orchestrator and event schema.
 
 ## Security Considerations
 
