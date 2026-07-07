@@ -153,6 +153,9 @@ export function friendlyLaunchError(err: unknown): string {
     if (err.status === 429) {
       return "The demo request limit was reached. Please wait a minute and launch again.";
     }
+    if (err.status === 422) {
+      return "Project idea must be between 3 and 2000 characters. Add a bit more detail and launch again.";
+    }
     if (err.status !== undefined && err.status >= 500) {
       return "ForgeOS hit a temporary problem generating this run. Please try again shortly.";
     }
