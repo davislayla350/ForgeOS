@@ -6,6 +6,8 @@ ForgeOS transforms a single project idea into a structured software development 
 
 **Global AI Hackathon Series with Qwen Cloud** — **Track 3: Agent Society**.
 
+[Test it LIVE here!](https://forge-os-pi.vercel.app/)
+
 ---
 
 ## Features
